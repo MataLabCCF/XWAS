@@ -61,10 +61,10 @@ You can change the path of the programs using the respective flags for each soft
 ## Options 
 
 ```
-usage: main.py [-h] -a AUTOSOMAL -x XCHROMOSOME -s STRUCTURAL -o OUTPUT -O ONETHOUSAND -f FOLDER -c COVAR -g GENETICMAP -p PHENOTYPE [-I INTERPRETER] [-P PLINK] [-T PLINK2] [-B BCFTOOLS] [-E EAGLE] [-N NATORA] [-K KING] [-d DEGREE]
-               [-C] [-G GNOMAD] [-b BUILD] [-t THREADS]
+usage: main.py [-h] -a AUTOSOMAL -x XCHROMOSOME -s STRUCTURAL -o OUTPUT -O ONETHOUSAND -f FOLDER -c COVAR -g GENETICMAP -p PHENOTYPE [-I INTERPRETER] [-P PLINK] [-T PLINK2] [-B BCFTOOLS] [-b BGZIP] [-E EAGLE] [-N NATORA] [-K KING]
+               [-d DEGREE] [-C] [-G GNOMAD] [-r REFERENCEBUILD] [-t THREADS]
 
-XWAS
+XWAShilpa
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -98,6 +98,8 @@ Optional arguments:
                         Plink2 path (default: plink2)
   -B BCFTOOLS, --bcftools BCFTOOLS
                         BCFTools path (default: bcftools)
+  -b BGZIP, --bgzip BGZIP
+                        Bgzip path (default: bgzip)
   -E EAGLE, --eagle EAGLE
                         Eagle path (default: eagle)
   -N NATORA, --NAToRA NATORA
@@ -108,7 +110,7 @@ Optional arguments:
   -C, --continuous      Set the phenotype as continuos
   -G GNOMAD, --gnomAD GNOMAD
                         Path to gnomAD files with the chr replaced by * (default = "", not perform this step)
-  -b BUILD, --build BUILD
+  -r REFERENCEBUILD, --referenceBuild REFERENCEBUILD
                         Human Genome build (default : hg38)
   -t THREADS, --threads THREADS
                         Number of threads to Eagle (default = 1)
