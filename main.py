@@ -13,6 +13,7 @@ python = ""
 eagle = ""
 NAToRA = ""
 king = ""
+bgzip = ""
 
 def execute(command):
     print(f'\n\n{command}\n\n')
@@ -590,7 +591,9 @@ def flip(fileName, out, folder, oneThousand, threads, geneticMap):
             fileOut.write('\n')
     fileOut.close()
 
-    command = f'{eagle} --vcfTarget {folder}/{out}_sexFixed.vcf --vcfRef {oneThousand} --allowRefAltSwap --outPrefix {folder}/{out}_Phased ' \
+    command = f'{bgzip} {folder}/{out}_sexFixed.vcf'
+    execute(command)
+    command = f'{eagle} --vcfTarget {folder}/{out}_sexFixed.vcf.gz --vcfRef {oneThousand} --allowRefAltSwap --outPrefix {folder}/{out}_Phased ' \
               f'--numThreads {threads} --geneticMapFile {geneticMap} --keepMissingPloidyX'
     execute(command)
 
@@ -694,6 +697,7 @@ def setPrograms(args):
     global NAToRA
     global king
     global python
+    global bgzip
 
 
     if args.plink:
@@ -730,6 +734,12 @@ def setPrograms(args):
         python = args.interpreter
     else:
         python = "python"
+
+    if args.bgzip:
+        bgzip = args.bgzip
+    else:
+        bgzip = "bgzip"
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='XWAShilpa')
 
@@ -748,6 +758,7 @@ if __name__ == '__main__':
     optional.add_argument('-P', '--plink', help='Plink path (default: plink)', required=False, default="")
     optional.add_argument('-T', '--plink2', help='Plink2 path (default: plink2)', required=False, default="")
     optional.add_argument('-B', '--bcftools', help='BCFTools path (default: bcftools)', required=False, default="")
+    optional.add_argument('-b', '--bgzip', help='Bgzip path (default: bgzip)', required=False, default="")
     optional.add_argument('-E', '--eagle', help='Eagle path (default: eagle)', required=False, default="")
     optional.add_argument('-N', '--NAToRA', help='NAToRA path (default: NAToRA)', required=False, default="")
     optional.add_argument('-K', '--king', help='KING path (defaul: king)', required=False, default="")
@@ -758,8 +769,9 @@ if __name__ == '__main__':
                           action="store_true")
     optional.add_argument('-G', '--gnomAD', help='Path to gnomAD files with the chr replaced by * (default = "", '
                                                  'not perform this step)', required=False, default="")
-    optional.add_argument('-b', '--build', help='Human Genome build (default : hg38)', required=False, default="hg38")
+    optional.add_argument('-r', '--referenceBuild', help='Human Genome build (default : hg38)', required=False, default="hg38")
     optional.add_argument('-t', '--threads', help='Number of threads to Eagle (default = 1)', required=False, default="1")
+
 
     args = parser.parse_args()
 
@@ -787,7 +799,7 @@ if __name__ == '__main__':
 
 
     autosomalFiles = autosomalSteps(autosomalPrefix, output, folder, structural, outLog, covar, pheno, continuous, gnomad, remove)
-    chrX = chrXSteps(chrXPrefix, output+"_chrX", folder, structural, outLog, covar, pheno, continuous, gnomad, autosomalFiles, args.build)
+    chrX = chrXSteps(chrXPrefix, output+"_chrX", folder, structural, outLog, covar, pheno, continuous, gnomad, autosomalFiles, args.referenceBuild)
 
     flip(chrX, output+"_chrX", folder, args.oneThousand, args.threads, args.geneticMap)
     outLog.close()
