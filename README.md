@@ -51,9 +51,9 @@ In this pipeline we use:
 - Plink
 - Eagle
 - Python3
--- NetworkX
--- Scipy
--- Numpy
+  - NetworkX
+  - Scipy
+  - Numpy
 - NAToRA
 - king
 
