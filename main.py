@@ -741,7 +741,7 @@ def setPrograms(args):
         bgzip = "bgzip"
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='XWAShilpa')
+    parser = argparse.ArgumentParser(description='XWAS cleaning')
 
     required = parser.add_argument_group("Required arguments")
     required.add_argument('-a', '--autosomal', help='Autosomal input file', required=True)
