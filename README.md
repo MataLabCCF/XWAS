@@ -2,7 +2,7 @@
 
 In this GitHub we implemented almost all steps from the article "Common X-Chromosome Variants Are Associated with Parkinson Disease Risk" (https://doi.org/10.1002/ana.26051)
 
-We did not implemented the steps based on ancestry and the steps related to the attribution panel (which are performed by TopMed).
+We did not implemented the steps based on ancestry and the steps related to the imputation panel (which are performed by TopMed).
 
 The pipeline has cleaning process to Autosomal and X-chromosome.
 
