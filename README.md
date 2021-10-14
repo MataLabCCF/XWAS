@@ -113,7 +113,7 @@ Optional arguments:
                         NAToRA path (default: NAToRA)
   -K KING, --king KING  KING path (defaul: king)
   -d DEGREE, --degree DEGREE
-                        Relationship degree to be removed. (default = "", that meansto not remove relationship)
+                        Relationship degree to be removed. (default = "", that means to not remove relationship)
   -C, --continuous      Set the phenotype as continuos
   -G GNOMAD, --gnomAD GNOMAD
                         Path to gnomAD files with the chr replaced by * (default = "", not perform this step)
