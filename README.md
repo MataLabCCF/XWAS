@@ -64,6 +64,7 @@ In this pipeline we use:
 You can change the path of the programs using the respective flags for each software
 
 \* Used on relationship control
+
 \*\* Used swap reference and alternative alleles using 1KGP 30x as reference
 ## Options 
 
