@@ -43,21 +43,28 @@ The cleaning process to autosomal is composed by:
 - Remove SNPs with differential missingness between cases and controls with p-values lower than 10^-5
 - Remove SNPs with differential missingness between males and females with p-values lower than 10^-5
 - Remove SNPs with differential MAF between males and females with p-values lower than 10^-5
-- Phasing using Eagle v2.4.1 with 1KGP 30x as reference to swap REF/ALT allesles (--allowRefAltSwap)
+- Phasing using Eagle v2.4.1 with 1KGP 30x as reference to swap REF/ALT alleles (--allowRefAltSwap)
 
 ## Programs used
 
 In this pipeline we use:
-- Plink
-- Eagle
+
+- Plink 
 - Python3
-  - NetworkX
-  - Scipy
+  - NetworkX (NAToRA) *
+  - Scipy (Fisher's exact test)
   - Numpy
-- NAToRA
-- king
+- King *
+- NAToRA *
+
+- BGZIP **
+- BCFTools **
+- Eagle **
 
 You can change the path of the programs using the respective flags for each software
+
+\* Used on relationship control
+\*\* Used swap reference and alternative alleles using 1KGP 30x as reference
 ## Options 
 
 ```
