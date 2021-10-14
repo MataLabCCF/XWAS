@@ -593,6 +593,8 @@ def flip(fileName, out, folder, oneThousand, threads, geneticMap):
 
     command = f'{bgzip} {folder}/{out}_sexFixed.vcf'
     execute(command)
+    command = f'{bcftools} index {folder}/{out}_sexFixed.vcf.gz'
+    execute(command)
     command = f'{eagle} --vcfTarget {folder}/{out}_sexFixed.vcf.gz --vcfRef {oneThousand} --allowRefAltSwap --outPrefix {folder}/{out}_Phased ' \
               f'--numThreads {threads} --geneticMapFile {geneticMap} --keepMissingPloidyX'
     execute(command)
