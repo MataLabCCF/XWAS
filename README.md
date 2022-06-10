@@ -25,7 +25,7 @@ bcftools index gnomadOnlyAF_onePercent_1.vcf.gz --threads 10
 ```
 - Remove SNPs with HWE in controls with p-value lower than 10^-5
 - Remove SNPs with missing data in SNPs grater than 5%
-- Relationshipo control using king to calculate and NAToRA to remove (https://github.com/ldgh/NAToRA_Public)
+- Relationship control using king to calculate and NAToRA to remove (https://github.com/ldgh/NAToRA_Public)
 
 ## Chromosome X
 
