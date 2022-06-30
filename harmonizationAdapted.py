@@ -324,10 +324,11 @@ def HWE(fileName, output, folder, group, pval, females=False):
             split = line.strip().split()
             ID = split[1]
             groupTested = split[2]
-            pvalue = float(split[-1])
-            if groupTested == group:
-                if pvalue < pval:
-                    fileRemove.write(f'{ID}\n')
+            if split[-1] != 'NA':
+                pvalue = float(split[-1])
+                if groupTested == group:
+                    if pvalue < pval:
+                        fileRemove.write(f'{ID}\n')
     fileRemove.close()
     command = lineToRemoveSNPs(fileName, f'{folder}/{output}_FailedHWE', f'{folder}/{output}_HWE')
     print(f'{command}')
@@ -557,7 +558,7 @@ def differentialMAFMaleAndFemale(fileName, output, folder, cutoff):
 
     return f'{folder}/{output}_diffMAF', 'bed'
 
-def flip(fileName, out, folder, oneThousand, threads, geneticMap):
+def flip(fileName, out, folder, oneThousand, threads, geneticMap, homozygous):
     sexDict = {}
     famFile = open(fileName+".fam")
     for line in famFile:
@@ -570,6 +571,8 @@ def flip(fileName, out, folder, oneThousand, threads, geneticMap):
     vcfFile = open(f'{folder}/{out}_toFixSex.vcf')
     fileOut = open(f'{folder}/{out}_sexFixed.vcf', 'w')
     header = True
+
+
     for line in vcfFile:
         if header:
             fileOut.write(line)
@@ -585,17 +588,24 @@ def flip(fileName, out, folder, oneThousand, threads, geneticMap):
                 else:
                     sex = str(sexDict[headerLine[i]])
                     if sex == "1" or sex == "M":
-                        fileOut.write(f'\t{split[i][0]}')
+                        if not homozygous:
+                            fileOut.write(f'\t{split[i][0]}')
+                        else:
+                            fileOut.write(f'\t{split[i][0]}/{split[i][0]}')
                     else:
                         fileOut.write(f'\t{split[i]}')
             fileOut.write('\n')
     fileOut.close()
 
+
     command = f'{bgzip} {folder}/{out}_sexFixed.vcf'
     execute(command)
     command = f'{bcftools} index {folder}/{out}_sexFixed.vcf.gz'
     execute(command)
-    command = f'{eagle} --vcfTarget {folder}/{out}_sexFixed.vcf.gz --vcfRef {oneThousand} --allowRefAltSwap --outPrefix {folder}/{out}_Phased ' \
+
+    vcfInput = f'{folder}/{out}_sexFixed.vcf.gz'
+
+    command = f'{eagle} --vcfTarget {vcfInput} --vcfRef {oneThousand} --allowRefAltSwap --outPrefix {folder}/{out}_Phased ' \
               f'--numThreads {threads} --geneticMapFile {geneticMap} --keepMissingPloidyX'
     execute(command)
 
@@ -773,6 +783,8 @@ if __name__ == '__main__':
                                                  'not perform this step)', required=False, default="")
     optional.add_argument('-r', '--referenceBuild', help='Human Genome build (default : hg38)', required=False, default="hg38")
     optional.add_argument('-t', '--threads', help='Number of threads to Eagle (default = 1)', required=False, default="1")
+    optional.add_argument('-H', '--homozygousMale', help='The males has homozygous diploid chr X (default False)', required=False,
+                          default=False, action = "store_true")
 
 
     args = parser.parse_args()
@@ -801,7 +813,8 @@ if __name__ == '__main__':
 
 
     autosomalFiles = autosomalSteps(autosomalPrefix, output, folder, structural, outLog, covar, pheno, continuous, gnomad, remove)
-    chrX = chrXSteps(chrXPrefix, output+"_chrX", folder, structural, outLog, covar, pheno, continuous, gnomad, autosomalFiles, args.referenceBuild)
+    chrX = chrXSteps(chrXPrefix, output+"_chrX", folder, structural, outLog, covar, pheno, continuous, gnomad,
+                     autosomalFiles, args.referenceBuild)
 
-    flip(chrX, output+"_chrX", folder, args.oneThousand, args.threads, args.geneticMap)
+    flip(chrX, output+"_chrX", folder, args.oneThousand, args.threads, args.geneticMap, args.homozygousMale)
     outLog.close()
