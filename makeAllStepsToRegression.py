@@ -147,7 +147,7 @@ def filterData(desiredCountry, folder, name, covarDict):
 def readInformationAboutSamples(covarTable, countryFile):
     print('We are reading the covar table. We are asssuming that the ID is the first col')
     print('We are also assuming that there is the column SEX and the Phenotype column is named DISEASE')
-    print('We are also checking if there is anyt covar field that is empty or NA')
+    print('We are also checking if there is any covar field that is empty or NA')
     
     file = open(covarTable)
     
@@ -296,7 +296,7 @@ def runPCA(vcfFile, folder, name, sex):
     
     return f'{folder}/{name}_{sex}.tsv'
 
-def  convertToPLINK2AndRun(vcfFile, dictCovarLocal, vcfImputed, folder, name, sex, plink2):
+def  convertToPLINK2AndRun(vcfFile, dictCovarLocal, vcfImputed, folder, name, sex, plink2, covar, cutoff):
     
     
     #List of individuals to be extract from imputed data
@@ -312,8 +312,11 @@ def  convertToPLINK2AndRun(vcfFile, dictCovarLocal, vcfImputed, folder, name, se
                 fileOut.write(split[i]+ "\n")
             break
     fileOut.close()
-    
-    execute(f'{plink2} --vcf {vcfImputed} --keep {folder}/{name}_{sex}_ToExtractFromImputed --make-pgen --out {folder}/{name}_{sex}_toRegression --extract-if-info \"R2 > 0.8\"')
+
+    command = f'{plink2} --vcf {vcfImputed} --keep {folder}/{name}_{sex}_ToExtractFromImputed --make-pgen --out ' \
+                 f'{folder}/{name}_{sex}_toRegression --extract-if-info \"R2 > {cutoff}\"'
+
+    execute(command)
     execute(f'mkdir {folder}/backPSAM')
     execute(f'mkdir {folder}/result')
     execute(f'mv {folder}/{name}_{sex}_toRegression.psam {folder}/backPSAM/')
@@ -349,14 +352,32 @@ def  convertToPLINK2AndRun(vcfFile, dictCovarLocal, vcfImputed, folder, name, se
             filePSAMWithCovar.write(f'\n')
             
     filePSAMWithCovar.close()
+
+    command = f'{plink2} --pfile {folder}/{name}_{sex}_toRegression --pheno-name DISEASE --covar-variance-standardize ' \
+              f'--glm hide-covar --out {folder}/result/{name}_{sex} --covar-name {covar} --ci 0.95'
+    execute(command)
     
-    if sex.upper() != "BOTH":
-        execute(f'{plink2} --pfile {folder}/{name}_{sex}_toRegression --pheno-name DISEASE --covar-variance-standardize --glm hide-covar --out {folder}/result/{name}_{sex} --covar-name AGE PC1 PC2 PC3 PC4 PC5 PC6 PC7 PC8 PC9 PC10')
-    else:    
-        execute(f'{plink2} --pfile {folder}/{name}_{sex}_toRegression --pheno-name DISEASE --covar-variance-standardize --glm hide-covar --out {folder}/result/{name}_{sex} --covar-name AGE PC2 PC3 PC4 PC5 PC6 PC7 PC8 PC9 PC10')
-    
-    
-    
+def buildCovarList(covarList, maxPC):
+    sex = ""
+    both = ""
+
+    for covar in covarList:
+        if covar.lower() != "sex":
+            if sex == "":
+                sex = covar
+                both = covar
+            else:
+                sex = sex + " " + covar
+                both = both + " " + covar
+
+    for i in range(1, maxPC+1):
+        if i == 1:
+            sex = f"{sex} PC{i}"
+        else:
+            sex = f"{sex} PC{i}"
+            both = f"{both} PC{i}"
+
+    return sex, both
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PCA and regression')
@@ -370,6 +391,9 @@ if __name__ == '__main__':
     required.add_argument('-C', '--countryFile', help='File with relation Ind country', required=True)
     required.add_argument('-c', '--country', help='Country to analyze (default: all). You can select more than one country', required=False, default = ["all"], nargs='+')
     required.add_argument('-p', '--plink2', help='Path of PLINK 2 (default = plink2)', required=False, default="plink2")
+    required.add_argument('-l', '--covarList', help='List of covar to be used (do not include PCAs)', required=True, nargs="+")
+    required.add_argument('-m', '--maxPC', help='max PC to be used on covar', required=True, type=int)
+    required.add_argument('-r', '--r2', help='r2 cutoff', required=True, type=float)
 
     args = parser.parse_args()
     
@@ -391,7 +415,15 @@ if __name__ == '__main__':
     PCABoth = runPCA(fileWithoutLDBoth, args.folder, args.name, "Both")
     outlierBoth, dictCovar = createOutlierFile(PCABoth, args.folder, args.name, covarDict, 3, "Both")
     bothWithoutOutlier = removeOutiler(outlierBoth, bothBegin, args.name, args.folder, "both_OutlierMaleAndFemale")
-    
-    convertToPLINK2AndRun(maleWithoutOutlier, dictCovar, args.imputed, args.folder, args.name, "Male", args.plink2)
-    convertToPLINK2AndRun(femaleWithoutOutlier, dictCovar, args.imputed, args.folder, args.name, "Female", args.plink2)
-    convertToPLINK2AndRun(bothWithoutOutlier, dictCovar, args.imputed, args.folder, args.name, "Both", args.plink2)
+
+    print("Building covar list (covariates + PCs). In our tests PLINK2 add automatically the SEX, causing this error message:")
+    print("Error: Cannot proceed with --glm regression on phenotype 'DISEASE', since correlation between covariates "
+          "'SEX' and 'SEX' is too high (CORR_TOO_HIGH). You may want to remove redundant covariates and try again.")
+
+    covarSex, covarBoth = buildCovarList(args.covarList, args.maxPC)
+
+    convertToPLINK2AndRun(maleWithoutOutlier, dictCovar, args.imputed, args.folder, args.name, "Male", args.plink2, covarSex, args.r2)
+    convertToPLINK2AndRun(femaleWithoutOutlier, dictCovar, args.imputed, args.folder, args.name, "Female", args.plink2, covarSex, args.r2)
+    convertToPLINK2AndRun(bothWithoutOutlier, dictCovar, args.imputed, args.folder, args.name, "Both", args.plink2, covarBoth, args.r2)
+
+
