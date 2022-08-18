@@ -356,6 +356,8 @@ def  convertToPLINK2AndRun(vcfFile, dictCovarLocal, vcfImputed, folder, name, se
     command = f'{plink2} --pfile {folder}/{name}_{sex}_toRegression --pheno-name DISEASE --covar-variance-standardize ' \
               f'--glm hide-covar --out {folder}/result/{name}_{sex} --covar-name {covar} --ci 0.95'
     execute(command)
+
+    return f"{folder}/{name}_{sex}_toRegression", f"{folder}/result/{name}_{sex}"
     
 def buildCovarList(covarList, maxPC):
     sex = ""
@@ -379,22 +381,46 @@ def buildCovarList(covarList, maxPC):
 
     return sex, both
 
+def runMetaMaleFemale(pfilesMale, hybridMale, pfilesFemale, hybridFemale, gwama, python, plink, folder, name):
+    newFolder = f"{folder}/{name}FemaleMale/"
+    execute(f"mkdir {newFolder}")
+    fileInput = open(f"{newFolder}/{name}toMetaAnalyse.txt", 'w')
+
+    fileInput.write(f"{name}_Female\t{hybridFemale}\t{pfilesFemale}\tF\n")
+    fileInput.write(f"{name}_Male\t{hybridMale}\t{pfilesMale}\tM\n")
+    fileInput.close()
+
+    execute(f"{python} metaAnalysisGWAMA.py -l {newFolder}/{name}toMetaAnalyse.txt -n {name}_MetaFemaleMale "
+            f"-f {newFolder} -G {gwama} -P {plink} -o -s")
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PCA and regression')
 
-    required = parser.add_argument_group("Required arguments")
-    required.add_argument('-g', '--genotyped', help='Genotyped file name', required=False)
-    required.add_argument('-i', '--imputed', help='Imputed file name', required=False)
-    required.add_argument('-n', '--name', help='Name to use', required=False)
-    required.add_argument('-f', '--folder', help='Folder to output files', required=False)
-    required.add_argument('-t', '--tableCovar', help='File with covariatives to be added to the model', required=True)
-    required.add_argument('-C', '--countryFile', help='File with relation Ind country', required=True)
-    required.add_argument('-c', '--country', help='Country to analyze (default: all). You can select more than one country', required=False, default = ["all"], nargs='+')
-    required.add_argument('-p', '--plink2', help='Path of PLINK 2 (default = plink2)', required=False, default="plink2")
-    required.add_argument('-l', '--covarList', help='List of covar to be used (do not include PCAs)', required=True, nargs="+")
-    required.add_argument('-m', '--maxPC', help='max PC to be used on covar', required=True, type=int)
-    required.add_argument('-r', '--r2', help='r2 cutoff', required=True, type=float)
+    data = parser.add_argument_group("Data arguments")
+    data.add_argument('-g', '--genotyped', help='Genotyped file name', required=False)
+    data.add_argument('-i', '--imputed', help='Imputed file name', required=False)
+    data.add_argument('-t', '--tableCovar', help='File with covariatives to be added to the model', required=True)
+    data.add_argument('-C', '--countryFile', help='File with relation Ind country', required=True)
+    data.add_argument('-c', '--country',
+                          help='Country to analyze (default: all). You can select more than one country',
+                          required=False, default=["all"], nargs='+')
 
+    parameters = parser.add_argument_group("Data arguments")
+    parameters.add_argument('-l', '--covarList', help='List of covar to be used (do not include PCAs)', required=True, nargs="+")
+    parameters.add_argument('-m', '--maxPC', help='max PC to be used on covar', required=True, type=int)
+    parameters.add_argument('-r', '--r2', help='r2 cutoff', required=True, type=float)
+
+
+    output = parser.add_argument_group("Output arguments")
+    output.add_argument('-n', '--name', help='Name to use', required=False)
+    output.add_argument('-f', '--folder', help='Folder to output files', required=False)
+
+
+    programs = parser.add_argument_group("Programs arguments")
+    programs.add_argument('-G', '--gwama', help='GWAMA program (default = gwama)', required=False, default="gwama")
+    programs.add_argument('-p', '--plink2', help='Path of PLINK 2 (default = plink2)', required=False, default="plink2")
+    programs.add_argument('-P', '--python', help='Path of Python 3 (default = python)', required=False, default="python")
     args = parser.parse_args()
     
     execute(f'mkdir {args.folder}')
@@ -422,8 +448,10 @@ if __name__ == '__main__':
 
     covarSex, covarBoth = buildCovarList(args.covarList, args.maxPC)
 
-    convertToPLINK2AndRun(maleWithoutOutlier, dictCovar, args.imputed, args.folder, args.name, "Male", args.plink2, covarSex, args.r2)
-    convertToPLINK2AndRun(femaleWithoutOutlier, dictCovar, args.imputed, args.folder, args.name, "Female", args.plink2, covarSex, args.r2)
-    convertToPLINK2AndRun(bothWithoutOutlier, dictCovar, args.imputed, args.folder, args.name, "Both", args.plink2, covarBoth, args.r2)
+    pfilesMale, hybridMale = convertToPLINK2AndRun(maleWithoutOutlier, dictCovar, args.imputed, args.folder, args.name, "Male", args.plink2, covarSex, args.r2)
+    pfilesFemale, hybridFemale = convertToPLINK2AndRun(femaleWithoutOutlier, dictCovar, args.imputed, args.folder, args.name, "Female", args.plink2, covarSex, args.r2)
+    pfilesBoth, hybridBoth = convertToPLINK2AndRun(bothWithoutOutlier, dictCovar, args.imputed, args.folder, args.name, "Both", args.plink2, covarBoth, args.r2)
+
+    runMetaMaleFemale(pfilesMale, hybridMale, pfilesFemale, hybridFemale, args.gwama, args.python, args.plink2, args.folder, args.name)
 
 

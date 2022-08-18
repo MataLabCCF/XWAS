@@ -2,19 +2,29 @@ import numpy as np
 import argparse
 import os
 
-def openListFile(fileName):
+def openListFile(fileName, sex):
     dictFiles = {}
 
     listFile = open(fileName)
 
     for fileLine in listFile:
         split = fileLine.strip().split()
-        if len(split) == 3:
-            dictFiles[split[0]] = {}
-            dictFiles[split[0]]["hybrid"] = split[1]
-            dictFiles[split[0]]["pgen"] = split[2]
+        if sex:
+            if len(split) == 3:
+                dictFiles[split[0]] = {}
+                dictFiles[split[0]]["hybrid"] = split[1]
+                dictFiles[split[0]]["pgen"] = split[2]
+            else:
+                print(f"Ignoring line {fileLine} because it has only ({len(split)} columns)")
         else:
-            print(f"Ignoring line {fileLine} because it has onlye ({len(split)} columns)")
+            if len(split) == 4:
+                dictFiles[split[0]] = {}
+                dictFiles[split[0]]["hybrid"] = split[1]
+                dictFiles[split[0]]["pgen"] = split[2]
+                dictFiles[split[0]]["sex"] = split[3]
+            else:
+                print(f"Ignoring line {fileLine} because it has only ({len(split)} columns)")
+
     return dictFiles
 
 def execute(command):
@@ -75,12 +85,15 @@ def getPositionCol(headerLine):
 
     return dictFields
 
-def prepareInputGWAMAOR(fileDict, freqDict, statusDict, folder, name):
+def prepareInputGWAMAOR(fileDict, freqDict, statusDict, folder, name, sex):
     fileToGWAMA = open(f"{folder}/input{name}.in", 'w')
 
     for pop in fileDict:
         fileOut = open(f"{folder}/input{pop}.in", 'w')
-        fileToGWAMA.write(f"{folder}/input{pop}.in\n")
+        if sex:
+            fileToGWAMA.write(f"{folder}/input{pop}.in\t{fileDict[pop]['sex']}\n")
+        else:
+            fileToGWAMA.write(f"{folder}/input{pop}.in\n")
         #fileOut.write("MARKERNAME\tCHR\tPOS\tIMPUTED\tN\tEA\tNEA\tEAF\tBETA\tSE\n")
         fileOut.write("MARKERNAME\tCHR\tPOS\tIMPUTED\tN\tEA\tNEA\tEAF\tOR\tOR_95L\tOR_95U\n")
         #fileOut.write("MARKERNAME\tCHR\tPOS\tIMPUTED\tN\tEA\tNEA\tOR\tOR_95L\tOR_95U\n")
@@ -124,12 +137,15 @@ def prepareInputGWAMAOR(fileDict, freqDict, statusDict, folder, name):
     return f"{folder}/input{name}.in"
 
 
-def prepareInputGWAMABeta(fileDict, freqDict, statusDict, folder, name):
+def prepareInputGWAMABeta(fileDict, freqDict, statusDict, folder, name, sex):
     fileToGWAMA = open(f"{folder}/input{name}.in", 'w')
 
     for pop in fileDict:
         fileOut = open(f"{folder}/input{pop}.in", 'w')
-        fileToGWAMA.write(f"{folder}/input{pop}.in\n")
+        if sex:
+            fileToGWAMA.write(f"{folder}/input{pop}.in\t{fileDict[pop]['sex']}\n")
+        else:
+            fileToGWAMA.write(f"{folder}/input{pop}.in\n")
         fileOut.write("MARKERNAME\tCHR\tPOS\tIMPUTED\tN\tEA\tNEA\tEAF\tBETA\tSE\n")
         #fileOut.write("MARKERNAME\tCHR\tPOS\tIMPUTED\tN\tEA\tNEA\tEAF\tOR\tOR_95L\tOR_95U\n")
         #fileOut.write("MARKERNAME\tCHR\tPOS\tIMPUTED\tN\tEA\tNEA\tOR\tOR_95L\tOR_95U\n")
@@ -170,21 +186,26 @@ def prepareInputGWAMABeta(fileDict, freqDict, statusDict, folder, name):
         fileOut.close()
     return f"{folder}/input{name}.in"
 
-def runGWAMABeta(fileGWAMA, gwama, folder, name, randomEffectCorrection, genomicControl):
+def runGWAMABeta(fileGWAMA, gwama, folder, name, randomEffectCorrection, genomicControl, sex):
     line = f"{gwama} -i {fileGWAMA} -o {folder}/{name} -qt"
     if randomEffectCorrection:
         line = f"{line} -r"
     if genomicControl:
         line = f"{line} -gc"
+    if sex:
+        line = f"{line} --sex"
 
     execute(line)
 
-def runGWAMAOR(fileGWAMA, gwama, folder, name, randomEffectCorrection, genomicControl):
+def runGWAMAOR(fileGWAMA, gwama, folder, name, randomEffectCorrection, genomicControl, sex):
     line = f"{gwama} -i {fileGWAMA} -o {folder}/{name}"
     if randomEffectCorrection:
         line = f"{line} -r"
     if genomicControl:
         line = f"{line} -gc"
+    if sex:
+        line = f"{line} --sex"
+
 
     execute(line)
 
@@ -199,6 +220,8 @@ if __name__ == '__main__':
 
     optional = parser.add_argument_group("Optional arguments")
     optional.add_argument('-o', '--odds', help='Use OR instead BETA (Default: False)', default=False, action="store_true")
+    optional.add_argument('-s', '--sex', help='Run gender-differentiated and gender-heterogeneity analysis (Default: False)', default=False,
+                          action="store_true")
     optional.add_argument('-r', '--random', help='Random effect correction from GWAMA (Default: False)', default=False,
                           action="store_true")
     optional.add_argument('-g', '--genomic', help='Use genomic control for adjusting studies result files from GWAMA (Default: False)', default=False,
@@ -211,12 +234,12 @@ if __name__ == '__main__':
 
     execute(f"mkdir {args.folder}")
 
-    fileDict = openListFile(args.list)
+    fileDict = openListFile(args.list, args.sex)
     freqDict = calculateFrq(fileDict, args.plink2, args.folder)
     statusDict = getStatus(fileDict)
     if args.odds:
-        fileGWAMA = prepareInputGWAMAOR(fileDict, freqDict, statusDict, args.folder, args.name)
-        runGWAMAOR(fileGWAMA, args.gwama, args.folder, args.name, args.random, args.genomic)
+        fileGWAMA = prepareInputGWAMAOR(fileDict, freqDict, statusDict, args.folder, args.name, args.sex)
+        runGWAMAOR(fileGWAMA, args.gwama, args.folder, args.name, args.random, args.genomic, args.sex)
     else:
-        fileGWAMA = prepareInputGWAMABeta(fileDict, freqDict, statusDict, args.folder, args.name)
-        runGWAMABeta(fileGWAMA, args.gwama, args.folder, args.name, args.random, args.genomic)
+        fileGWAMA = prepareInputGWAMABeta(fileDict, freqDict, statusDict, args.folder, args.name, args.sex)
+        runGWAMABeta(fileGWAMA, args.gwama, args.folder, args.name, args.random, args.genomic, args.sex)
