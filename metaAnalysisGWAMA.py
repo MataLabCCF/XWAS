@@ -9,7 +9,7 @@ def openListFile(fileName, sex):
 
     for fileLine in listFile:
         split = fileLine.strip().split()
-        if sex:
+        if not sex:
             if len(split) == 3:
                 dictFiles[split[0]] = {}
                 dictFiles[split[0]]["hybrid"] = split[1]
