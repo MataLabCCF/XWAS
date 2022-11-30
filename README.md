@@ -145,6 +145,12 @@ python3.8 main.py \
 -O /home/user/input/OneThousand/CCDG_14151_B01_GRM_WGS_2020-08-05_chrX.filtered.eagle2-phased_header.vcf.gz
 ```
 
+ ## Acknowledgements
 
+This work is supported by NIH Grant R01 1R01NS112499-01A1, MJFF Grant ID: 18298, ASAP-GP2 and Parkinson's Foundation
+ 
+ ### Contact
+ 
+ Developer: Thiago Peixoto Leal. PhD (PEIXOTT@ccf.org or thpeixotol@hotmail.com)
 
 
