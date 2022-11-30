@@ -296,7 +296,7 @@ def runPCA(vcfFile, folder, name, sex):
     
     return f'{folder}/{name}_{sex}.tsv'
 
-def  convertToPLINK2AndRun(vcfFile, dictCovarLocal, vcfImputed, folder, name, sex, plink2, covar, cutoff):
+def  convertToPLINK2AndRun(vcfFile, dictCovarLocal, vcfImputed, folder, name, sex, plink2, covar, cutoff, firth):
     
     
     #List of individuals to be extract from imputed data
@@ -353,8 +353,12 @@ def  convertToPLINK2AndRun(vcfFile, dictCovarLocal, vcfImputed, folder, name, se
             
     filePSAMWithCovar.close()
 
-    command = f'{plink2} --pfile {folder}/{name}_{sex}_toRegression --pheno-name DISEASE --covar-variance-standardize ' \
+    if not firth:
+        command = f'{plink2} --pfile {folder}/{name}_{sex}_toRegression --pheno-name DISEASE --covar-variance-standardize ' \
               f'--glm hide-covar --out {folder}/result/{name}_{sex} --covar-name {covar} --ci 0.95'
+    else:
+        command = f'{plink2} --pfile {folder}/{name}_{sex}_toRegression --pheno-name DISEASE --covar-variance-standardize ' \
+                  f'--glm hide-covar firth --out {folder}/result/{name}_{sex} --covar-name {covar} --ci 0.95'
     execute(command)
 
     return f"{folder}/{name}_{sex}_toRegression", f"{folder}/result/{name}_{sex}"
@@ -381,13 +385,59 @@ def buildCovarList(covarList, maxPC):
 
     return sex, both
 
-def runMetaMaleFemale(pfilesMale, hybridMale, pfilesFemale, hybridFemale, gwama, python, plink, folder, name):
+def  removeHeterozygous(vcf, folder, name):
+    import gzip
+
+    inputFile = gzip.open(vcf)
+    fileOut = open(f"{folder}/{name}_withoutHeterozygous.vcf", 'w')
+
+    header = True
+    for line in inputFile:
+        line = line.decode('utf-8')
+        if header:
+            if line[0:6] == "#CHROM":
+                split = line.strip().split()
+
+                fileOut.write(f"{split[0]}")
+                for i in range(1, len(split)):
+                    fileOut.write(f"\t{split[i]}")
+                fileOut.write("\n")
+                header = False
+            else:
+                fileOut.write(line)
+        else:
+            split = line.strip().split()
+            fileOut.write(f"{split[0]}")
+            for i in range(1, len(split)):
+                field = split[i]
+                if field[0:3] == "0|1" or field[0:3] == "1|0":
+                    data = field.split(":")
+                    outString = ".|."
+                    for j in range(1, len(data)):
+                        outString = f"{outString}:."
+                    fileOut.write(f"\t{outString}")
+                else:
+                    fileOut.write(f"\t{split[i]}")
+            fileOut.write("\n")
+    fileOut.close()
+
+    return f"{folder}/{name}_withoutHeterozygous.vcf"
+
+
+def runMetaMaleFemale(pfilesMale, regressionMale, pfilesFemale, regressionFemale, gwama, python, plink, folder, name, firth):
     newFolder = f"{folder}/{name}FemaleMale/"
     execute(f"mkdir {newFolder}")
     fileInput = open(f"{newFolder}/{name}toMetaAnalyse.txt", 'w')
 
-    fileInput.write(f"{name}_Female\t{hybridFemale}\t{pfilesFemale}\tF\n")
-    fileInput.write(f"{name}_Male\t{hybridMale}\t{pfilesMale}\tM\n")
+    if not firth:
+        regMale = f'{regressionMale}.DISEASE.glm.logistic.hybrid'
+        regFemale = f'{regressionFemale}.DISEASE.glm.logistic.hybrid'
+    else:
+        regMale = f'{regressionMale}.DISEASE.glm.firth'
+        regFemale = f'{regressionFemale}.DISEASE.glm.firth'
+
+    fileInput.write(f"{name}_Female\t{regFemale}\t{pfilesFemale}\tF\n")
+    fileInput.write(f"{name}_Male\t{regMale}\t{pfilesMale}\tM\n")
     fileInput.close()
 
     execute(f"{python} metaAnalysisGWAMA.py -l {newFolder}/{name}toMetaAnalyse.txt -n {name}_MetaFemaleMale "
@@ -406,11 +456,13 @@ if __name__ == '__main__':
                           help='Country to analyze (default: all). You can select more than one country',
                           required=False, default=["all"], nargs='+')
 
-    parameters = parser.add_argument_group("Data arguments")
+    parameters = parser.add_argument_group("Parameter arguments")
     parameters.add_argument('-l', '--covarList', help='List of covar to be used (do not include PCAs)', required=True, nargs="+")
     parameters.add_argument('-m', '--maxPC', help='max PC to be used on covar', required=True, type=int)
     parameters.add_argument('-r', '--r2', help='r2 cutoff', required=True, type=float)
-
+    parameters.add_argument('-F', '--firth', help='Force all PLINK2 regressions use the firth', required=False, default = False, action="store_true")
+    parameters.add_argument('-H', '--homozygousOnly', help='Remove heterozygous from imputed file', required=False,
+                            default=False, action="store_true")
 
     output = parser.add_argument_group("Output arguments")
     output.add_argument('-n', '--name', help='Name to use', required=False)
@@ -448,10 +500,13 @@ if __name__ == '__main__':
 
     covarSex, covarBoth = buildCovarList(args.covarList, args.maxPC)
 
-    pfilesMale, hybridMale = convertToPLINK2AndRun(maleWithoutOutlier, dictCovar, args.imputed, args.folder, args.name, "Male", args.plink2, covarSex, args.r2)
-    pfilesFemale, hybridFemale = convertToPLINK2AndRun(femaleWithoutOutlier, dictCovar, args.imputed, args.folder, args.name, "Female", args.plink2, covarSex, args.r2)
-    pfilesBoth, hybridBoth = convertToPLINK2AndRun(bothWithoutOutlier, dictCovar, args.imputed, args.folder, args.name, "Both", args.plink2, covarBoth, args.r2)
+    if args.homozygousOnly:
+        args.imputed = removeHeterozygous(args.imputed, args.folder, args.name)
 
-    runMetaMaleFemale(pfilesMale, hybridMale, pfilesFemale, hybridFemale, args.gwama, args.python, args.plink2, args.folder, args.name)
+    pfilesMale, regressionMale = convertToPLINK2AndRun(maleWithoutOutlier, dictCovar, args.imputed, args.folder, args.name, "Male", args.plink2, covarSex, args.r2, args.firth)
+    pfilesFemale, regressionFemale = convertToPLINK2AndRun(femaleWithoutOutlier, dictCovar, args.imputed, args.folder, args.name, "Female", args.plink2, covarSex, args.r2, args.firth)
+    pfilesBoth, regressionBoth = convertToPLINK2AndRun(bothWithoutOutlier, dictCovar, args.imputed, args.folder, args.name, "Both", args.plink2, covarBoth, args.r2, args.firth)
+
+    runMetaMaleFemale(pfilesMale, regressionMale, pfilesFemale, regressionFemale, args.gwama, args.python, args.plink2, args.folder, args.name, args.firth)
 
 

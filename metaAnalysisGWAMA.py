@@ -220,6 +220,8 @@ if __name__ == '__main__':
 
     optional = parser.add_argument_group("Optional arguments")
     optional.add_argument('-o', '--odds', help='Use OR instead BETA (Default: False)', default=False, action="store_true")
+    optional.add_argument('-F', '--firth', help='Signalize that we used firth on PLINK2', default=False,
+                          action="store_true")
     optional.add_argument('-s', '--sex', help='Run gender-differentiated and gender-heterogeneity analysis (Default: False)', default=False,
                           action="store_true")
     optional.add_argument('-r', '--random', help='Random effect correction from GWAMA (Default: False)', default=False,
