@@ -214,7 +214,7 @@ python3.8 makeAllStepsToRegressionV2.py \
 ```
 The parameter -F forces [PLINK2 use the firth regression](https://www.cog-genomics.org/plink/2.0/assoc#no_firth), that is good for small sample size. 
 
-The parameter -H was a test, which we make all heterozygous variants for females being missing data. The idea behind this test is based on the fact that one of the two X chromosomes is silenced in females, so there is no way to say *in silico* which of the chromosomes is used for biological processes. So, the heterozygous could act like a noise to regression. In our tests, this flag give more statistical power to females analysis, but this analysis caused a lose of power to analysis which males and females are analyzed together.
+The parameter -H was a test which we make all heterozygous variants for females being missing data. The idea behind this test is based on the fact that one of the two X chromosomes is silenced in females, so there is no way to say *in silico* which of the chromosomes is used for biological processes. So, the heterozygous could act like a noise to regression, since there is no way to predict which allele was used on transcription. In our tests, this flag gave more statistical power to females analysis, but caused a loss of power to analysis which males and females are analyzed together.
 
 
  ## Acknowledgements
