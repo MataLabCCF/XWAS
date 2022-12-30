@@ -336,8 +336,11 @@ def HWE(fileName, output, folder, group, pval, females=False):
 
     return f'{folder}/{output}_HWE', 'bed'
 
-def genoMind(fileName, output, folder, cutoff):
-    command = f"{plink} --bfile {fileName} --geno {cutoff} --mind {cutoff} --make-bed --out {folder}/{output}_genoMind"
+def genoMind(fileName, output, folder, cutoffGeno, cutoffMind):
+    command = f"{plink} --bfile {fileName} --geno {cutoffGeno} --make-bed --out {folder}/{output}_geno"
+    execute(command)
+
+    command = f"{plink} --bfile {fileName} --mind {cutoffMind} --make-bed --out {folder}/{output}_genoMind"
     execute(command)
 
     return f'{folder}/{output}_genoMind', 'bed'
@@ -637,7 +640,7 @@ def chrXSteps(fileName, outputPrefix, folder, structural, logFile, covar, pheno,
     fileName, type = HWE(fileName, outputPrefix, folder, "UNAFF", 0.00001)
     SNPs, ind = countFiles(fileName, "bed", logFile, dataType, 'HWE')
 
-    fileName, type = genoMind(fileName, outputPrefix, folder, 0.05)
+    fileName, type = genoMind(fileName, outputPrefix, folder, 0.05, 0.1)
     SNPs, ind = countFiles(fileName, "bed", logFile, dataType, 'Geno')
 
     fileName, type = sexCheck(fileName, outputPrefix, folder, build)
@@ -693,7 +696,7 @@ def autosomalSteps(fileName, outputPrefix, folder, structural, logFile, covar, p
     fileName, type = HWE(fileName, outputPrefix, folder, "UNAFF", 0.00001)
     SNPs, ind = countFiles(fileName, "bed", logFile, dataType, 'HWE')
 
-    fileName, type = genoMind(fileName, outputPrefix, folder, 0.05)
+    fileName, type = genoMind(fileName, outputPrefix, folder, 0.05, 0.1)
     SNPs, ind = countFiles(fileName, "bed", logFile, dataType, 'Geno')
 
     if remove:
