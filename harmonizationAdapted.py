@@ -649,11 +649,11 @@ def chrXSteps(fileName, outputPrefix, folder, structural, logFile, covar, pheno,
     fileName, type = hetInMales(fileName, outputPrefix, folder)
     SNPs, ind = countFiles(fileName, "bed", logFile, dataType, 'HetMale')
 
-    #fileName, type = differentialMissingCaseAndControl(fileName, outputPrefix, folder, 0.00001)
-    #SNPs, ind = countFiles(fileName, "bed", logFile, dataType, 'DifferentialMissing')
+    fileName, type = differentialMissingCaseAndControl(fileName, outputPrefix, folder, 0.00001)
+    SNPs, ind = countFiles(fileName, "bed", logFile, dataType, 'DifferentialMissing')
 
-    #fileName, type = HWE(fileName, outputPrefix, folder, "ALL", 0.00001, True)
-    #SNPs, ind = countFiles(fileName, "bed",  logFile, dataType, 'HWE females')
+    fileName, type = HWE(fileName, outputPrefix, folder, "ALL", 0.00001, True)
+    SNPs, ind = countFiles(fileName, "bed",  logFile, dataType, 'HWE females')
 
     fileName, type = removeMonomorphic(fileName, outputPrefix, folder)
     SNPs, ind = countFiles(fileName, "bed",  logFile, dataType, 'Monomorphic')
