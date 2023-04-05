@@ -218,6 +218,7 @@ The parameter -F forces [PLINK2 use the firth regression](https://www.cog-genomi
 
 The parameter -H was a test which we make all heterozygous variants for females being missing data. The idea behind this test is based on the fact that one of the two X chromosomes is silenced in females, so there is no way to say *in silico* which of the chromosomes is used for biological processes. So, the heterozygous could act like a noise to regression, since there is no way to predict which allele was used on transcription. In our tests, this flag gave more statistical power to females analysis, but caused a loss of power to analysis which males and females are analyzed together.
 
+We also uploaded the "makeAllStepsToRegressionAutosomalPCA.py", that perform the same analysis than "makeAllStepsToRegression.py" but using the Autosomal PCA. This changed was made based on the reviewer suggestion. This script will ask the autosomal dataset (-a) and we recoomend to use the "<name>_Relatedness" from the harmonization pipeline.
 
  ## Acknowledgements
 
