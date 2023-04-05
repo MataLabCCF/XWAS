@@ -12,7 +12,7 @@ The cleaning process to autosomal is composed by:
 
 - Remove individuals without covariatives
   - Mandatory covariates: Sex and Phenotypes
-  - All other coavariates in the covar file will be added to the model
+  - All other coavariates in the covar file will be checked and those samples that have "NA" will be removed
 - Remove SNPs located in Structural variants (file TryTyper.txt made by Valerio Napolioni)
 - Remove duplicated SNPs
 - Remove monomorphic SNPs
