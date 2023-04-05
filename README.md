@@ -130,7 +130,7 @@ Optional arguments:
 ## Example of command line
 
 ```
-python3.8 main.py \
+python3.8 harmonizationAdapted.py \
 -a /home/user/input/Input_Autosomal \
 -x /home/user/input/Input_chrX  \
 -s /home/user/input/TriTyper.txt \
