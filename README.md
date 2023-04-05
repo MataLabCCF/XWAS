@@ -200,7 +200,7 @@ Programs arguments:
 ### Example of command line
 
 ```
-python3.8 makeAllStepsToRegressionV2.py \
+python3.8 makeAllStepsToRegression.py \
 -g /home/user/input/OutTest/OutputTest_chrX_Phased.vcf.gz \
 -i /home/user/input/OutTest/OutputTest.chrX.imputed.dose.vcf.gz \
 -n OutputTest \
