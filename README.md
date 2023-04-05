@@ -10,7 +10,9 @@ The pipeline has cleaning process to Autosomal and X-chromosome.
 
 The cleaning process to autosomal is composed by:
 
-- Remove individuals without covariatives (Age, Sex and Phenotype)
+- Remove individuals without covariatives
+  - Mandatory covariates: Sex and Phenotypes
+  - All other coavariates in the covar file will be added to the model
 - Remove SNPs located in Structural variants (file TryTyper.txt made by Valerio Napolioni)
 - Remove duplicated SNPs
 - Remove monomorphic SNPs
@@ -128,7 +130,7 @@ Optional arguments:
 ## Example of command line
 
 ```
-python3.8 main.py \
+python3.8 harmonizationAdapted.py \
 -a /home/user/input/Input_Autosomal \
 -x /home/user/input/Input_chrX  \
 -s /home/user/input/TriTyper.txt \
@@ -198,7 +200,7 @@ Programs arguments:
 ### Example of command line
 
 ```
-python3.8 makeAllStepsToRegressionV2.py \
+python3.8 makeAllStepsToRegression.py \
 -g /home/user/input/OutTest/OutputTest_chrX_Phased.vcf.gz \
 -i /home/user/input/OutTest/OutputTest.chrX.imputed.dose.vcf.gz \
 -n OutputTest \
