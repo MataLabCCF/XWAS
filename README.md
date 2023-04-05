@@ -10,7 +10,9 @@ The pipeline has cleaning process to Autosomal and X-chromosome.
 
 The cleaning process to autosomal is composed by:
 
-- Remove individuals without covariatives (Age, Sex and Phenotype)
+- Remove individuals without covariatives
+  - Mandatory covariates: Sex and Phenotypes
+  - All other coavariates in the covar file will be added to the model
 - Remove SNPs located in Structural variants (file TryTyper.txt made by Valerio Napolioni)
 - Remove duplicated SNPs
 - Remove monomorphic SNPs
