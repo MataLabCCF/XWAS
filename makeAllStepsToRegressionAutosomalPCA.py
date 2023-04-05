@@ -9,7 +9,7 @@ import os
 import argparse
 import numpy as np
 import gzip
-
+import time
 
 def addPCAOnCovarDict(PCAFile, covarDict, sex):
     fileMale = open(PCAFile)
@@ -24,7 +24,6 @@ def addPCAOnCovarDict(PCAFile, covarDict, sex):
             headerLine = line.strip().split()
             
         else:
-            
             split = line.strip().split()
             indList.append(split[0])
             for i in range(1,len(split)):
@@ -85,7 +84,6 @@ def calculateOutilier(dataInfo, indList, folder, name, covarDict, sex, N):
             
             if PCLower < (-1*N*sdLower) or PCLower > (N*sdLower) or PCHigher < (-1*N*sdHigher) or PCHigher > (N*sdHigher):
                 covarDict[ind]["Outlier"] = True
-                
                 fileOut.write(f'{ind}\t{PCLower}\t{PCHigher}\tTRUE\t{statusText}\t{covarDict[ind]["COUNTRY"]}\t{sexText}\n')
             else:
                 fileOut.write(f'{ind}\t{PCLower}\t{PCHigher}\tFALSE\t{statusText}\t{covarDict[ind]["COUNTRY"]}\t{sexText}\n')
@@ -99,10 +97,12 @@ def calculateOutilier(dataInfo, indList, folder, name, covarDict, sex, N):
     
     return f"{folder}/{name}_{sex}_outliersToRemove"
 
-def execute(line):
+
+def execute(line, run=True):
     print(" ==================== ======================== ===================")
     print(line)
-    os.system(line)
+    if run:
+        os.system(f"{line}")
     print("******************************************************************")
     #input()
     
@@ -190,36 +190,61 @@ def readInformationAboutSamples(covarTable, countryFile):
     
     return covarDict
 
-def bcftoolsExtract(fileName, fileToExtractMale, fileToExtractFemale, folder, name):
-    bcftoolsIndex(fileName)
-    execute(f'bcftools view -S {fileToExtractMale} -Oz -o {folder}/{name}_Male_step1.vcf.gz {fileName} --force-samples')
-    execute(f'bcftools view -S {fileToExtractFemale} -Oz -o {folder}/{name}_Female_step1.vcf.gz {fileName} --force-samples')
+def getIndListFromVCF(vcfFile, fileOutName):
+    fileOut = open(fileOutName, "w")
+
+    file = gzip.open(vcfFile)
+    for line in file:
+        line = line.decode("utf-8")
+        if "#CHROM" in line:
+            split = line.strip().split()
+
+            for i in range(9, len(split)):
+                fileOut.write(split[i] + "\n")
+            break
+    fileOut.close()
+
+    return fileOutName
+
+def bcftoolsExtractAutosomal(fileNameX, fileNameAutosomal, fileToExtractMale, fileToExtractFemale, folder, name, run=True):
+    bcftoolsIndex(fileNameX, run)
+    bcftoolsIndex(fileNameAutosomal, run)
+    execute(f'bcftools view -S {fileToExtractMale} -Oz -o {folder}/{name}_Male_X_step1.vcf.gz {fileNameX} --force-samples', run)
+    execute(f'bcftools view -S {fileToExtractFemale} -Oz -o {folder}/{name}_Female_X_step1.vcf.gz {fileNameX} --force-samples', run)
+
+    malesFromX = getIndListFromVCF(f"{folder}/{name}_Male_X_step1.vcf.gz", f"{folder}/extractMaleFromX.txt")
+    femalesFromX = getIndListFromVCF(f"{folder}/{name}_Female_X_step1.vcf.gz", f"{folder}/extractFemaleFromX.txt")
+
+    execute(f'bcftools view -S {malesFromX} -Oz -o {folder}/{name}_Male_A_step1.vcf.gz {fileNameAutosomal} --force-samples', run)
+    execute(f'bcftools view -S {femalesFromX} -Oz -o {folder}/{name}_Female_A_step1.vcf.gz {fileNameAutosomal} --force-samples', run)
+
+
     
-    return f'{folder}/{name}_Male_step1.vcf.gz', f'{folder}/{name}_Female_step1.vcf.gz'
+    return f'{folder}/{name}_Male_A_step1.vcf.gz', f'{folder}/{name}_Female_A_step1.vcf.gz'
 
 
-def bcftoolsIndex(fileName):
-    execute(f'bcftools index {fileName}')
+def bcftoolsIndex(fileName, run):
+    execute(f'bcftools index {fileName}', run)
 
-def removeOutiler(listToRemove, vcfFile, name, folder, sex):
-    bcftoolsIndex(vcfFile)
-    execute(f'bcftools view -S ^{listToRemove} -Oz -o {folder}/{name}_{sex}_withoutOutlier.vcf.gz {vcfFile} --force-samples')
+def removeOutiler(listToRemove, vcfFile, name, folder, sex, run = True):
+    bcftoolsIndex(vcfFile, run)
+    execute(f'bcftools view -S ^{listToRemove} -Oz -o {folder}/{name}_{sex}_withoutOutlier.vcf.gz {vcfFile} --force-samples', run)
     
     return f'{folder}/{name}_{sex}_withoutOutlier.vcf.gz'
     
 
-def removeOutliersMalesAndFemales(outlierFileMale, outlierFileFemale, fileNameMale, fileNameFemale, name, folder):
-    maleWithoutOutlier = removeOutiler(outlierFileMale, fileNameMale, name, folder, "Male")
-    femaleWithoutOutlier = removeOutiler(outlierFileFemale, fileNameFemale, name, folder, "Female")
+def removeOutliersMalesAndFemales(outlierFileMale, outlierFileFemale, fileNameMale, fileNameFemale, name, folder, run = True):
+    maleWithoutOutlier = removeOutiler(outlierFileMale, fileNameMale, name, folder, "Male", run)
+    femaleWithoutOutlier = removeOutiler(outlierFileFemale, fileNameFemale, name, folder, "Female", run)
     
     return maleWithoutOutlier, femaleWithoutOutlier
 
-def convertAndRemoveLDBySex(fileNameMale, fileNameFemale, folder, name, plink2):
-    withoutLDMale = convertAndRemoveLD(fileNameMale, folder, name, 'Male', plink2)
-    withoutLDFemale = convertAndRemoveLD(fileNameFemale, folder, name, 'Female', plink2)
+def convertAndRemoveLDBySex(fileNameMale, fileNameFemale, folder, name, plink2, run=True):
+    withoutLDMale = convertAndRemoveLD(fileNameMale, folder, name, 'Male', plink2, run)
+    withoutLDFemale = convertAndRemoveLD(fileNameFemale, folder, name, 'Female', plink2, run)
     return withoutLDMale, withoutLDFemale
 
-def getIndFromMalesAndFemales(male, female, vcfFile, folder, name):
+def getIndFromMalesAndFemales(male, female, vcfFile, folder, name, run= True):
     
     fileOut = open(f'{folder}/ToKeep_FemalesAndMales.txt', 'w')
     fileOutLog = open(f'{folder}/ToKeep_FemalesAndMales.log', 'w')
@@ -246,17 +271,17 @@ def getIndFromMalesAndFemales(male, female, vcfFile, folder, name):
                 fileOutLog.write(split[i]+ "\tF\n")
             break
     fileOut.close()
-    execute(f'bcftools view -S {folder}/ToKeep_FemalesAndMales.txt -Oz -o {folder}/{name}_Both_step1.vcf.gz {vcfFile} --force-samples')
+    execute(f'bcftools view -S {folder}/ToKeep_FemalesAndMales.txt -Oz -o {folder}/{name}_Both_step1.vcf.gz {vcfFile} --force-samples', run)
     return f'{folder}/{name}_Both_step1.vcf.gz'
     
     
     
     
 
-def convertAndRemoveLD(fileName, folder, name, sex, plink2):
-    execute(f"{plink2} --vcf {fileName} --make-pgen --out {folder}/{name}_{sex}_toLD")
+def convertAndRemoveLD(fileName, folder, name, sex, plink2, run = True):
+    execute(f"{plink2} --vcf {fileName} --make-pgen --out {folder}/{name}_{sex}_toLD", run)
     
-    execute(f"{plink2} --pfile {folder}/{name}_{sex}_toLD --out {folder}/{name}_{sex} --indep-pairwise 200 50 0.2")
+    execute(f"{plink2} --pfile {folder}/{name}_{sex}_toLD --out {folder}/{name}_{sex} --indep-pairwise 200 50 0.2", run)
     
     file = open(f'{folder}/{name}_{sex}.prune.in')
     SNPs = []
@@ -267,28 +292,31 @@ def convertAndRemoveLD(fileName, folder, name, sex, plink2):
     
     file = open(f'{folder}/{name}_{sex}_toLD.pvar')
     fileToKeep = open(f'{folder}/{name}_{sex}_withoutLD.txt', 'w')
-    header = True
-    for line in file:
-        if header:
-            if "#CHROM" in line:
-                header = False
-        else:
-            split = line.split()
-            if split[2] in SNPs:
-                fileToKeep.write(f'chr{split[0]}\t{split[1]}\n')
-    fileToKeep.close()
 
-    execute(f"bcftools view -T {folder}/{name}_{sex}_withoutLD.txt -Oz -o {folder}/{name}_{sex}_withoutLD.vcf.gz {fileName}")
+    print("Creating the list of variants to keep")
+    if run:
+        header = True
+        for line in file:
+            if header:
+                if "#CHROM" in line:
+                    header = False
+            else:
+                split = line.split()
+                if split[2] in SNPs:
+                    fileToKeep.write(f'chr{split[0]}\t{split[1]}\n')
+        fileToKeep.close()
+
+    execute(f"bcftools view -T {folder}/{name}_{sex}_withoutLD.txt -Oz -o {folder}/{name}_{sex}_withoutLD.vcf.gz {fileName}", run)
     return f'{folder}/{name}_{sex}_withoutLD.vcf.gz'
     
-def runPCARBySex(vcfFileMale, vcfFileFemale, folder, name, PCAScript):
-    maleTSV = runPCA(vcfFileMale, folder, name, "Male", PCAScript)
-    femaleTSV = runPCA(vcfFileFemale, folder, name, "Female", PCAScript)
+def runPCARBySex(vcfFileMale, vcfFileFemale, folder, name, PCA, run = True):
+    maleTSV = runPCA(vcfFileMale, folder, name, "Male", PCA, run)
+    femaleTSV = runPCA(vcfFileFemale, folder, name, "Female", PCA, run)
     
     return maleTSV, femaleTSV
     
-def runPCA(vcfFile, folder, name, sex, PCAScript):
-    execute(f'Rscript {PCAScript} {vcfFile} {folder}/{name}_{sex}.gds {folder}/{name}_{sex}.tsv')
+def runPCA(vcfFile, folder, name, sex, PCA, run=True):
+    execute(f'Rscript {PCA} {vcfFile} {folder}/{name}_{sex}.gds {folder}/{name}_{sex}.tsv', run)
     
     return f'{folder}/{name}_{sex}.tsv'
 
@@ -340,11 +368,14 @@ def  convertToPLINK2AndRun(vcfFile, dictCovarLocal, vcfImputed, folder, name, se
                 
             
             filePSAMWithCovar.write(f'{ind}')
+            print(f"{ind} -> {dictCovarLocal[ind]}")
             for field in headerOrder:
+                print(f"{field} -> ", end="")
                 if "PC" in field:
                     filePSAMWithCovar.write(f'\t{dictCovarLocal[ind][field][sex]}')
                 else:
                      filePSAMWithCovar.write(f'\t{dictCovarLocal[ind][field]}')
+            print(f"\n")
             filePSAMWithCovar.write(f'\n')
             
     filePSAMWithCovar.close()
@@ -375,6 +406,7 @@ def buildCovarList(covarList, maxPC):
     for i in range(1, maxPC+1):
         if i == 1:
             sex = f"{sex} PC{i}"
+            both = f"{both} PC{i}"
         else:
             sex = f"{sex} PC{i}"
             both = f"{both} PC{i}"
@@ -439,12 +471,30 @@ def runMetaMaleFemale(pfilesMale, regressionMale, pfilesFemale, regressionFemale
     execute(f"{python} metaAnalysisGWAMA.py -l {newFolder}/{name}toMetaAnalyse.txt -n {name}_MetaFemaleMale "
             f"-f {newFolder} -G {gwama} -P {plink} -o -s")
 
+def convertPLINK2VCF(autosomal, genotyped, folder, name, plink2, bcftools, run = True):
+    execute(f"{bcftools} query {genotyped} -l > {folder}/toKeepChrX.txt", run)
+    #time.sleep(2)
+
+
+    fileInput = open(f"{folder}/toKeepChrX.txt")
+    fileToUse = open(f"{folder}/toKeepChrX_2cols.txt", 'w')
+    for line in fileInput:
+        ID = line.strip()
+        fileToUse.write(f"{ID}\t{ID}\n")
+    fileToUse.close()
+    fileInput.close()
+
+    execute(f"{plink2} --bfile {autosomal} --keep {folder}/toKeepChrX_2cols.txt --recode vcf id-paste=iid --out {folder}/{name} --output-chr chr26", run)
+    #input()
+    return f"{folder}/{name}.vcf"
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PCA and regression')
 
     data = parser.add_argument_group("Data arguments")
     data.add_argument('-g', '--genotyped', help='Genotyped file name', required=False)
+    data.add_argument('-a', '--autosomal', help='Autosomal Genotyped file name', required=False)
+
     data.add_argument('-i', '--imputed', help='Imputed file name', required=False)
     data.add_argument('-t', '--tableCovar', help='File with covariatives to be added to the model', required=True)
     data.add_argument('-C', '--countryFile', help='File with relation Ind country', required=True)
@@ -469,7 +519,7 @@ if __name__ == '__main__':
     programs.add_argument('-G', '--gwama', help='GWAMA program (default = gwama)', required=False, default="gwama")
     programs.add_argument('-p', '--plink2', help='Path of PLINK 2 (default = plink2)', required=False, default="plink2")
     programs.add_argument('-P', '--python', help='Path of Python 3 (default = python)', required=False, default="python")
-    programs.add_argument('-R', '--runPCA', help='Path of runPCA script (default = runPCA.R)', required=False,
+    programs.add_argument('-R', '--runPCA', help='Path of runPCA.R script (default = runPCA.R)', required=False,
                           default="runPCA.R")
     args = parser.parse_args()
     
@@ -478,19 +528,37 @@ if __name__ == '__main__':
     covarDict = readInformationAboutSamples(args.tableCovar, args.countryFile)
     fileToExtractMale, fileToExtractFemale = filterData(args.country, args.folder, args.name, covarDict)
     
-    
-    fileExtractedMale, fileExtractedFemale = bcftoolsExtract(args.genotyped, fileToExtractMale, fileToExtractFemale, args.folder, args.name)
-    fileWithoutLDMale, fileWithoutLDFemale = convertAndRemoveLDBySex(fileExtractedMale, fileExtractedFemale, args.folder, args.name, args.plink2)
-    
-    PCAFileMale, PCAFileFemale = runPCARBySex(fileWithoutLDMale, fileWithoutLDFemale, args.folder, args.name, args.runPCA)
-    outlierFileMale, outlierFileFemale, dictCovar = createOutlierFileBySex(PCAFileMale, PCAFileFemale, args.folder, args.name, covarDict, 3)
-    maleWithoutOutlier, femaleWithoutOutlier = removeOutliersMalesAndFemales(outlierFileMale, outlierFileFemale, fileExtractedMale, fileExtractedFemale, args.name, args.folder)
-    
-    bothBegin = getIndFromMalesAndFemales(maleWithoutOutlier, femaleWithoutOutlier, args.genotyped, args.folder, args.name)
-    fileWithoutLDBoth = convertAndRemoveLD(bothBegin, args.folder, args.name, 'Both', args.plink2)
-    PCABoth = runPCA(fileWithoutLDBoth, args.folder, args.name, "Both",  args.runPCA)
+    autosomalVCF = convertPLINK2VCF(args.autosomal, args.genotyped, args.folder, args.name, args.plink2, "bcftools")
+
+    #==================================== Extract ================================================
+    fileExtractedMaleA, fileExtractedFemaleA = bcftoolsExtractAutosomal(args.genotyped, autosomalVCF, fileToExtractMale,
+                                                                        fileToExtractFemale, args.folder, args.name)
+
+
+    # ==================================== Remove LD ================================================
+    fileWithoutLDMale, fileWithoutLDFemale = convertAndRemoveLDBySex(fileExtractedMaleA, fileExtractedFemaleA, args.folder,
+                                                                     args.name+"_Autosomal", args.plink2)
+
+    # ==================================== Run PCA ================================================
+    PCAFileMale, PCAFileFemale = runPCARBySex(fileWithoutLDMale, fileWithoutLDFemale, args.folder, args.name+"_Autosomal",
+                                              args.runPCA)
+
+    # ==================================== Outliers ================================================
+    outlierFileMale, outlierFileFemale, dictCovar = createOutlierFileBySex(PCAFileMale, PCAFileFemale, args.folder,
+                                                                           args.name, covarDict, 3)
+
+    # ==================================== Remove outliers ================================================
+    maleWithoutOutlierA, femaleWithoutOutlierA = removeOutliersMalesAndFemales(outlierFileMale, outlierFileFemale,
+                                                                             fileExtractedMaleA, fileExtractedFemaleA,
+                                                                             args.name+"_Autosomal", args.folder)
+
+    # ==================================== Both ================================================
+    bothBeginAutosomal = getIndFromMalesAndFemales(maleWithoutOutlierA, femaleWithoutOutlierA, autosomalVCF, args.folder, args.name+"_Autosomal")
+    fileWithoutLDBoth = convertAndRemoveLD(bothBeginAutosomal, args.folder, args.name+"_Autosomal", 'Both', args.plink2)
+    PCABoth = runPCA(fileWithoutLDBoth, args.folder, args.name, "Both", args.runPCA)
+
     outlierBoth, dictCovar = createOutlierFile(PCABoth, args.folder, args.name, covarDict, 3, "Both")
-    bothWithoutOutlier = removeOutiler(outlierBoth, bothBegin, args.name, args.folder, "both_OutlierMaleAndFemale")
+    bothWithoutOutlierA = removeOutiler(outlierBoth, bothBeginAutosomal, args.name, args.folder, "both_OutlierMaleAndFemale")
 
     print("Building covar list (covariates + PCs). In our tests PLINK2 add automatically the SEX, causing this error message:")
     print("Error: Cannot proceed with --glm regression on phenotype 'DISEASE', since correlation between covariates "
@@ -501,10 +569,9 @@ if __name__ == '__main__':
     if args.homozygousOnly:
         args.imputed = removeHeterozygous(args.imputed, args.folder, args.name)
 
-    pfilesMale, regressionMale = convertToPLINK2AndRun(maleWithoutOutlier, dictCovar, args.imputed, args.folder, args.name, "Male", args.plink2, covarSex, args.r2, args.firth)
-    pfilesFemale, regressionFemale = convertToPLINK2AndRun(femaleWithoutOutlier, dictCovar, args.imputed, args.folder, args.name, "Female", args.plink2, covarSex, args.r2, args.firth)
-    pfilesBoth, regressionBoth = convertToPLINK2AndRun(bothWithoutOutlier, dictCovar, args.imputed, args.folder, args.name, "Both", args.plink2, covarBoth, args.r2, args.firth)
+    print(dictCovar)
+    pfilesMale, regressionMale = convertToPLINK2AndRun(maleWithoutOutlierA, dictCovar, args.imputed, args.folder, args.name, "Male", args.plink2, covarSex, args.r2, args.firth)
+    pfilesFemale, regressionFemale = convertToPLINK2AndRun(femaleWithoutOutlierA, dictCovar, args.imputed, args.folder, args.name, "Female", args.plink2, covarSex, args.r2, args.firth)
+    pfilesBoth, regressionBoth = convertToPLINK2AndRun(bothWithoutOutlierA, dictCovar, args.imputed, args.folder, args.name, "Both", args.plink2, covarBoth, args.r2, args.firth)
 
     runMetaMaleFemale(pfilesMale, regressionMale, pfilesFemale, regressionFemale, args.gwama, args.python, args.plink2, args.folder, args.name, args.firth)
-
-
