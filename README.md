@@ -223,7 +223,8 @@ We also uploaded the "makeAllStepsToRegressionAutosomalPCA.py", that perform the
  ## Acknowledgements
 
 This work is supported by NIH Grant R01 1R01NS112499-01A1, MJFF Grant ID: 18298, ASAP-GP2 and Parkinson's Foundation
- 
+
+ The authors want to thank Dr Marla Mendes de Aquino (Genetics and Genome Biology Program, The Hospital for Sick Children, Toronto, ON, Canada) for the suggestions to improve the pipeline
  ### Contact
  
  Developer: Thiago Peixoto Leal. PhD (PEIXOTT@ccf.org or thpeixotol@hotmail.com)
