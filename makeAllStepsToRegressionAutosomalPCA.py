@@ -500,7 +500,7 @@ if __name__ == '__main__':
     data.add_argument('-g', '--genotyped', help='Genotyped file name', required=False)
     data.add_argument('-i', '--imputed', help='Imputed file name', required=False)
     data.add_argument('-t', '--tableCovar', help='File with covariatives to be added to the model', required=True)
-    data.add_argument('-C', '--countryFile', help='File with relation Ind country (default = no file)', required=False,
+    data.add_argument('-C', '--countryFile', help='File with relation Ind country (default = \"\")', required=False,
                       default="")
     data.add_argument('-c', '--country',
                       help='Country to analyze (default: all). You can select more than one country',
