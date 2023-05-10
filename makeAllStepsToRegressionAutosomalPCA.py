@@ -138,17 +138,17 @@ def filterData(desiredCountry, folder, name, covarDict):
     fileFemale.close()
     fileMale.close()
     return f'{folder}/toExtract{name}_Male', f'{folder}/toExtract{name}_Female'
-    
+
 
 def readInformationAboutSamples(covarTable, countryFile):
     print('We are reading the covar table. We are asssuming that the ID is the first col')
     print('We are also assuming that there is the column SEX and the Phenotype column is named DISEASE')
     print('We are also checking if there is any covar field that is empty or NA')
-    
+
     file = open(covarTable)
-    
+
     covarDict = {}
-    
+
     header = True
     for line in file:
         if header:
@@ -156,39 +156,48 @@ def readInformationAboutSamples(covarTable, countryFile):
             splitHeader = line.strip().split()
         else:
             split = line.strip().split()
-            
+
             toInclude = True
             for i in range(len(split)):
                 if split[i] == "NA" or split[i] == "" or split[i] == " " or split[i] == "nan":
                     toInclude = False
-                    print(f'Removing the ind {split[0]} because there is missing data ({split[i]}) on the field {splitHeader[i]}')
-            
+                    print(
+                        f'Removing the ind {split[0]} because there is missing data ({split[i]}) on the field {splitHeader[i]}')
+
             if toInclude:
                 covarDict[split[0]] = {}
-                for i in range(1,len(split)):
+                for i in range(1, len(split)):
                     if splitHeader[i].upper() == "DISEASE":
                         if split[i] == "0" or split[i] == 0:
                             split[i] = "1"
                         else:
                             split[i] = "2"
                     covarDict[split[0]][splitHeader[i].upper()] = split[i]
-                    
-    
-    print('We are reading the ID country file. We are asssuming that the ID is the first col and country is the second')
-    
-    file = open(countryFile)
-    
-    header = True
-    for line in file:
-        if header:
-            header = False
-        else:
-            split = line.strip().split()
-            
-            if split[0] in covarDict:
-                covarDict[split[0]]["COUNTRY"] = split[1]
-    
+
+
+
+    if countryFile != "":
+        print('We are reading the ID country file. We are asssuming that the ID is the first col and country is the second')
+        file = open(countryFile)
+
+        header = True
+        for line in file:
+            if header:
+                header = False
+            else:
+                split = line.strip().split()
+
+                if split[0] in covarDict:
+                    covarDict[split[0]]["COUNTRY"] = split[1]
+    else:
+        print('We will assume that everyone is from Planet Earth. If you have extra-terrestrial samples, tell the '
+              'developer to modify the code ')
+
+        for ind in covarDict:
+            covarDict[ind]["COUNTRY"] = "PlanetEarth"
+
     return covarDict
+
 
 def getIndListFromVCF(vcfFile, fileOutName):
     fileOut = open(fileOutName, "w")
@@ -273,10 +282,6 @@ def getIndFromMalesAndFemales(male, female, vcfFile, folder, name, run= True):
     fileOut.close()
     execute(f'bcftools view -S {folder}/ToKeep_FemalesAndMales.txt -Oz -o {folder}/{name}_Both_step1.vcf.gz {vcfFile} --force-samples', run)
     return f'{folder}/{name}_Both_step1.vcf.gz'
-    
-    
-    
-    
 
 def convertAndRemoveLD(fileName, folder, name, sex, plink2, run = True):
     execute(f"{plink2} --vcf {fileName} --make-pgen --out {folder}/{name}_{sex}_toLD", run)
@@ -321,8 +326,6 @@ def runPCA(vcfFile, folder, name, sex, PCA, run=True):
     return f'{folder}/{name}_{sex}.tsv'
 
 def  convertToPLINK2AndRun(vcfFile, dictCovarLocal, vcfImputed, folder, name, sex, plink2, covar, cutoff, firth):
-    
-    
     #List of individuals to be extract from imputed data
     fileOut = open(f'{folder}/{name}_{sex}_ToExtractFromImputed', 'w')
     
@@ -338,7 +341,9 @@ def  convertToPLINK2AndRun(vcfFile, dictCovarLocal, vcfImputed, folder, name, se
     fileOut.close()
 
     command = f'{plink2} --vcf {vcfImputed} --keep {folder}/{name}_{sex}_ToExtractFromImputed --make-pgen --out ' \
-                 f'{folder}/{name}_{sex}_toRegression --extract-if-info \"R2 > {cutoff}\"'
+                 f'{folder}/{name}_{sex}_toRegression'
+    if cutoff != -1:
+        command = command + f'--extract-if-info \"R2 > {cutoff}\"'
 
     execute(command)
     execute(f'mkdir {folder}/backPSAM')
@@ -493,20 +498,21 @@ if __name__ == '__main__':
 
     data = parser.add_argument_group("Data arguments")
     data.add_argument('-g', '--genotyped', help='Genotyped file name', required=False)
-    data.add_argument('-a', '--autosomal', help='Autosomal Genotyped file name', required=False)
-
     data.add_argument('-i', '--imputed', help='Imputed file name', required=False)
     data.add_argument('-t', '--tableCovar', help='File with covariatives to be added to the model', required=True)
-    data.add_argument('-C', '--countryFile', help='File with relation Ind country', required=True)
+    data.add_argument('-C', '--countryFile', help='File with relation Ind country (default = no file)', required=False,
+                      default="")
     data.add_argument('-c', '--country',
-                          help='Country to analyze (default: all). You can select more than one country',
-                          required=False, default=["all"], nargs='+')
+                      help='Country to analyze (default: all). You can select more than one country',
+                      required=False, default=["all"], nargs='+')
 
     parameters = parser.add_argument_group("Parameter arguments")
-    parameters.add_argument('-l', '--covarList', help='List of covar to be used (do not include PCAs)', required=True, nargs="+")
+    parameters.add_argument('-l', '--covarList', help='List of covar to be used (do not include PCAs)', required=True,
+                            nargs="+")
     parameters.add_argument('-m', '--maxPC', help='max PC to be used on covar', required=True, type=int)
-    parameters.add_argument('-r', '--r2', help='r2 cutoff', required=True, type=float)
-    parameters.add_argument('-F', '--firth', help='Force all PLINK2 regressions use the firth', required=False, default = False, action="store_true")
+    parameters.add_argument('-r', '--r2', help='r2 cutoff (default: no cutoff)', required=False, type=float, default=-1)
+    parameters.add_argument('-F', '--firth', help='Force all PLINK2 regressions use the firth', required=False,
+                            default=False, action="store_true")
     parameters.add_argument('-H', '--homozygousOnly', help='Remove heterozygous from imputed file', required=False,
                             default=False, action="store_true")
 
@@ -514,15 +520,15 @@ if __name__ == '__main__':
     output.add_argument('-n', '--name', help='Name to use', required=False)
     output.add_argument('-f', '--folder', help='Folder to output files', required=False)
 
-
     programs = parser.add_argument_group("Programs arguments")
     programs.add_argument('-G', '--gwama', help='GWAMA program (default = gwama)', required=False, default="gwama")
     programs.add_argument('-p', '--plink2', help='Path of PLINK 2 (default = plink2)', required=False, default="plink2")
-    programs.add_argument('-P', '--python', help='Path of Python 3 (default = python)', required=False, default="python")
-    programs.add_argument('-R', '--runPCA', help='Path of runPCA.R script (default = runPCA.R)', required=False,
+    programs.add_argument('-P', '--python', help='Path of Python 3 (default = python)', required=False,
+                          default="python")
+    programs.add_argument('-R', '--runPCA', help='Path of runPCA script (default = runPCA.R)', required=False,
                           default="runPCA.R")
     args = parser.parse_args()
-    
+
     execute(f'mkdir {args.folder}')
     
     covarDict = readInformationAboutSamples(args.tableCovar, args.countryFile)

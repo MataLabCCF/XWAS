@@ -173,21 +173,26 @@ def readInformationAboutSamples(covarTable, countryFile):
                             split[i] = "2"
                     covarDict[split[0]][splitHeader[i].upper()] = split[i]
                     
+
+    if countryFile != "":
+        print('We are reading the ID country file. We are asssuming that the ID is the first col and country is the second')
+        file = open(countryFile)
     
-    print('We are reading the ID country file. We are asssuming that the ID is the first col and country is the second')
-    
-    file = open(countryFile)
-    
-    header = True
-    for line in file:
-        if header:
-            header = False
-        else:
-            split = line.strip().split()
-            
-            if split[0] in covarDict:
-                covarDict[split[0]]["COUNTRY"] = split[1]
-    
+        header = True
+        for line in file:
+            if header:
+                header = False
+            else:
+                split = line.strip().split()
+
+                if split[0] in covarDict:
+                    covarDict[split[0]]["COUNTRY"] = split[1]
+    else:
+        print('We will assume that everyone is from Planet Earth. If you have extra-terrestrial samples, tell the '
+              'developer to modify the code ')
+        for ind in covarDict:
+            covarDict[ind]["COUNTRY"] = "PlanetEarth"
+
     return covarDict
 
 def bcftoolsExtract(fileName, fileToExtractMale, fileToExtractFemale, folder, name):
@@ -248,10 +253,6 @@ def getIndFromMalesAndFemales(male, female, vcfFile, folder, name):
     fileOut.close()
     execute(f'bcftools view -S {folder}/ToKeep_FemalesAndMales.txt -Oz -o {folder}/{name}_Both_step1.vcf.gz {vcfFile} --force-samples')
     return f'{folder}/{name}_Both_step1.vcf.gz'
-    
-    
-    
-    
 
 def convertAndRemoveLD(fileName, folder, name, sex, plink2):
     execute(f"{plink2} --vcf {fileName} --make-pgen --out {folder}/{name}_{sex}_toLD")
@@ -310,7 +311,9 @@ def  convertToPLINK2AndRun(vcfFile, dictCovarLocal, vcfImputed, folder, name, se
     fileOut.close()
 
     command = f'{plink2} --vcf {vcfImputed} --keep {folder}/{name}_{sex}_ToExtractFromImputed --make-pgen --out ' \
-                 f'{folder}/{name}_{sex}_toRegression --extract-if-info \"R2 > {cutoff}\"'
+                 f'{folder}/{name}_{sex}_toRegression'
+    if cutoff != -1:
+        command = command + f'--extract-if-info \"R2 > {cutoff}\"'
 
     execute(command)
     execute(f'mkdir {folder}/backPSAM')
@@ -447,7 +450,7 @@ if __name__ == '__main__':
     data.add_argument('-g', '--genotyped', help='Genotyped file name', required=False)
     data.add_argument('-i', '--imputed', help='Imputed file name', required=False)
     data.add_argument('-t', '--tableCovar', help='File with covariatives to be added to the model', required=True)
-    data.add_argument('-C', '--countryFile', help='File with relation Ind country', required=True)
+    data.add_argument('-C', '--countryFile', help='File with relation Ind country (default = no file)', required=False, default = "")
     data.add_argument('-c', '--country',
                           help='Country to analyze (default: all). You can select more than one country',
                           required=False, default=["all"], nargs='+')
@@ -455,7 +458,7 @@ if __name__ == '__main__':
     parameters = parser.add_argument_group("Parameter arguments")
     parameters.add_argument('-l', '--covarList', help='List of covar to be used (do not include PCAs)', required=True, nargs="+")
     parameters.add_argument('-m', '--maxPC', help='max PC to be used on covar', required=True, type=int)
-    parameters.add_argument('-r', '--r2', help='r2 cutoff', required=True, type=float)
+    parameters.add_argument('-r', '--r2', help='r2 cutoff (default: no cutoff)', required=False, type=float, default = -1)
     parameters.add_argument('-F', '--firth', help='Force all PLINK2 regressions use the firth', required=False, default = False, action="store_true")
     parameters.add_argument('-H', '--homozygousOnly', help='Remove heterozygous from imputed file', required=False,
                             default=False, action="store_true")
