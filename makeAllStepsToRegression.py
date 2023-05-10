@@ -311,7 +311,7 @@ def  convertToPLINK2AndRun(vcfFile, dictCovarLocal, vcfImputed, folder, name, se
     fileOut.close()
 
     command = f'{plink2} --vcf {vcfImputed} --keep {folder}/{name}_{sex}_ToExtractFromImputed --make-pgen --out ' \
-                 f'{folder}/{name}_{sex}_toRegression'
+                 f'{folder}/{name}_{sex}_toRegression '
     if cutoff != -1:
         command = command + f'--extract-if-info \"R2 > {cutoff}\"'
 
