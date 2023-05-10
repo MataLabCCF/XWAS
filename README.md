@@ -12,7 +12,7 @@ The cleaning process to autosomal is composed by:
 
 - Remove individuals without covariatives
   - Mandatory covariates: Sex and Phenotypes
-  - All other coavariates in the covar file will be added to the model
+  - All other coavariates in the covar file will be checked and those samples that have "NA" will be removed
 - Remove SNPs located in Structural variants (file TryTyper.txt made by Valerio Napolioni)
 - Remove duplicated SNPs
 - Remove monomorphic SNPs
@@ -218,11 +218,13 @@ The parameter -F forces [PLINK2 use the firth regression](https://www.cog-genomi
 
 The parameter -H was a test which we make all heterozygous variants for females being missing data. The idea behind this test is based on the fact that one of the two X chromosomes is silenced in females, so there is no way to say *in silico* which of the chromosomes is used for biological processes. So, the heterozygous could act like a noise to regression, since there is no way to predict which allele was used on transcription. In our tests, this flag gave more statistical power to females analysis, but caused a loss of power to analysis which males and females are analyzed together.
 
+We also uploaded the "makeAllStepsToRegressionAutosomalPCA.py", that perform the same analysis than "makeAllStepsToRegression.py" but using the Autosomal PCA. This changed was made based on the reviewer suggestion. This script will ask the autosomal dataset (-a) and we recomend to use the "<name>_Relatedness" from the harmonization pipeline.
 
  ## Acknowledgements
 
 This work is supported by NIH Grant R01 1R01NS112499-01A1, MJFF Grant ID: 18298, ASAP-GP2 and Parkinson's Foundation
- 
+
+ The authors want to thank Dr Marla Mendes de Aquino (Genetics and Genome Biology Program, The Hospital for Sick Children, Toronto, ON, Canada) for the suggestions to improve the pipeline
  ### Contact
  
  Developer: Thiago Peixoto Leal. PhD (PEIXOTT@ccf.org or thpeixotol@hotmail.com)
