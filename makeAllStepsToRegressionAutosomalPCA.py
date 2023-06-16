@@ -476,7 +476,7 @@ def runMetaMaleFemale(pfilesMale, regressionMale, pfilesFemale, regressionFemale
     execute(f"{python} metaAnalysisGWAMA.py -l {newFolder}/{name}toMetaAnalyse.txt -n {name}_MetaFemaleMale "
             f"-f {newFolder} -G {gwama} -P {plink} -o -s")
 
-def convertPLINK2VCF(autosomal, genotyped, folder, name, plink2, bcftools, run = True):
+def convertPLINK2VCF(genotyped, folder, name, plink2, bcftools, run = True):
     execute(f"{bcftools} query {genotyped} -l > {folder}/toKeepChrX.txt", run)
     #time.sleep(2)
 
@@ -489,7 +489,7 @@ def convertPLINK2VCF(autosomal, genotyped, folder, name, plink2, bcftools, run =
     fileToUse.close()
     fileInput.close()
 
-    execute(f"{plink2} --bfile {autosomal} --keep {folder}/toKeepChrX_2cols.txt --recode vcf id-paste=iid --out {folder}/{name} --output-chr chr26", run)
+    execute(f"{plink2} --bfile {genotyped} --keep {folder}/toKeepChrX_2cols.txt --recode vcf id-paste=iid --out {folder}/{name} --output-chr chr26", run)
     #input()
     return f"{folder}/{name}.vcf"
 
@@ -534,7 +534,7 @@ if __name__ == '__main__':
     covarDict = readInformationAboutSamples(args.tableCovar, args.countryFile)
     fileToExtractMale, fileToExtractFemale = filterData(args.country, args.folder, args.name, covarDict)
     
-    autosomalVCF = convertPLINK2VCF(args.autosomal, args.genotyped, args.folder, args.name, args.plink2, "bcftools")
+    autosomalVCF = convertPLINK2VCF(args.genotyped, args.folder, args.name, args.plink2, "bcftools")
 
     #==================================== Extract ================================================
     fileExtractedMaleA, fileExtractedFemaleA = bcftoolsExtractAutosomal(args.genotyped, autosomalVCF, fileToExtractMale,
