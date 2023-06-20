@@ -533,8 +533,11 @@ if __name__ == '__main__':
     
     covarDict = readInformationAboutSamples(args.tableCovar, args.countryFile)
     fileToExtractMale, fileToExtractFemale = filterData(args.country, args.folder, args.name, covarDict)
-    
-    autosomalVCF = convertPLINK2VCF(args.genotyped, args.folder, args.name, args.plink2, "bcftools")
+
+    if not ".vcf" in args.genotyped:
+        autosomalVCF = convertPLINK2VCF(args.genotyped, args.folder, args.name, args.plink2, "bcftools")
+    else:
+        autosomalVCF = args.genotyped
 
     #==================================== Extract ================================================
     fileExtractedMaleA, fileExtractedFemaleA = bcftoolsExtractAutosomal(args.genotyped, autosomalVCF, fileToExtractMale,
