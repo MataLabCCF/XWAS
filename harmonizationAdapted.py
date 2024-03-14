@@ -340,7 +340,7 @@ def genoMind(fileName, output, folder, cutoffGeno, cutoffMind):
     command = f"{plink} --bfile {fileName} --geno {cutoffGeno} --make-bed --out {folder}/{output}_geno"
     execute(command)
 
-    command = f"{plink} --bfile {fileName}_geno --mind {cutoffMind} --make-bed --out {folder}/{output}_genoMind"
+    command = f"{plink} --bfile {folder}/{output}_geno --mind {cutoffMind} --make-bed --out {folder}/{output}_genoMind"
     execute(command)
 
     return f'{folder}/{output}_genoMind', 'bed'
